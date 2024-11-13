@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-13 13:55:52
+ * @LastEditTime: 2024-11-13 14:19:55
 -->
 <template>
   <cesium-map @select="handleSelect" v-model="value" @map-ready="mapOnReady" />
@@ -33,7 +33,8 @@
     // 添加点云模型
     addPointCloud3Dtiles(window.CViewer);
     // 添加吊机模型
-    addMovingModel(window.CViewer);
+    let tileset = addMovingModel(window.CViewer);
+    startWebSocketListener(socket, tileset);
   }
 
   onMounted(() => {

@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-13 11:03:12
+ * @LastEditTime: 2024-11-13 14:19:52
  */
 import { Cesium3DTileset, Matrix3, Matrix4, Transforms, Math, Cartesian3 } from 'cesium'
 import useCesium from '/@/hooks/useCesium'
@@ -97,6 +97,7 @@ export function addMovingModel(viewer: ElRef) {
   }).catch((error) => {
     console.error('Failed to load 3D Tiles:', error);
   });
+  return tileset;
 }
 
 /**
