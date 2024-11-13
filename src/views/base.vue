@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-13 11:03:23
+ * @LastEditTime: 2024-11-13 13:55:52
 -->
 <template>
   <cesium-map @select="handleSelect" v-model="value" @map-ready="mapOnReady" />
@@ -32,6 +32,7 @@
     // startRotate({ multiplier: 300 })
     // 添加点云模型
     addPointCloud3Dtiles(window.CViewer);
+    // 添加吊机模型
     addMovingModel(window.CViewer);
   }
 
