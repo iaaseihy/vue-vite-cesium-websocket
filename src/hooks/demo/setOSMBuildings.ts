@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-13 14:19:52
+ * @LastEditTime: 2024-11-13 17:10:59
  */
 import { Cesium3DTileset, Matrix3, Matrix4, Transforms, Math, Cartesian3 } from 'cesium'
 import useCesium from '/@/hooks/useCesium'
@@ -30,8 +30,12 @@ export function addPointCloud3Dtiles(viewer: ElRef) {
   // 创建并加载 3D Tiles
   const tileset = new Cesium.Cesium3DTileset({
     url: tilesetUrl,
+	// 官方沙盒模型
+	// url: Cesium.IonResource.fromAssetId(16421),
   });
-
+  
+  // 设置 3D Tiles 的最大屏幕空间误差为 0，以获得最佳精度
+  tileset.maximumScreenSpaceError = 0; // 设置屏幕空间误差上限为 0
   // 将 3D Tiles 加入到场景中
   viewer.scene.primitives.add(tileset);
 

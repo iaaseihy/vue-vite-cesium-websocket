@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-13 14:19:55
+ * @LastEditTime: 2024-11-13 17:22:27
 -->
 <template>
   <cesium-map @select="handleSelect" v-model="value" @map-ready="mapOnReady" />
