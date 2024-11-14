@@ -4,13 +4,14 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-13 09:57:34
+ * @LastEditTime: 2024-11-14 16:33:28
  */
 import useCesium from '/@/hooks/useCesium'
 const Cesium = useCesium()
 
 import nProgress from 'nprogress'
 import { useAppStore } from '/@/store/modules/app'
+import { Viewer } from 'cesium'
 
 /**
  * 初始化 Cesium 地图
@@ -48,14 +49,14 @@ export default function useCesiumMap(viewerName = 'cesium3DContainer', extendCon
     scene3DOnly: false, //每个几何实例将只能以3D渲染以节省GPU内存
     sceneMode: 3, //初始场景模式 1 2D模式 2 2D循环模式 3 3D模式  Cesium.SceneMode
     //加载天地图影像地图，WebMapTileServiceImageryProvider该接口是加载WMTS服务的接口
-		imageryProvider: new Cesium.WebMapTileServiceImageryProvider({
-			url: 'http://t0.tianditu.gov.cn/img_w/wmts?tk=ebf64362215c081f8317203220f133eb',
-			layer: 'img',
-			style: 'default',
-			tileMatrixSetID: 'w',
-			format: 'tiles',
-			maximumLevel: 18
-		}),
+		// imageryProvider: new Cesium.WebMapTileServiceImageryProvider({
+		// 	url: 'http://t0.tianditu.gov.cn/img_w/wmts?tk=ebf64362215c081f8317203220f133eb',
+		// 	layer: 'img',
+		// 	style: 'default',
+		// 	tileMatrixSetID: 'w',
+		// 	format: 'tiles',
+		// 	maximumLevel: 18
+		// }),
   }
   const viewer = new Cesium.Viewer(viewerName, {
     ...baseConf,
@@ -74,8 +75,11 @@ export default function useCesiumMap(viewerName = 'cesium3DContainer', extendCon
   })
   viewer.scene.terrainProvider = terrainLayer
 
-  viewer.imageryLayers.addImageryProvider(new Cesium.IonImageryProvider({ assetId: 3 }))
+  // viewer.imageryLayers.addImageryProvider(new Cesium.IonImageryProvider({ assetId: 3 }))
 
+  // 添加天地图影像和注记
+  addTMap(viewer, 'img')
+  addTMap(viewer, 'cva')
   viewer.scene.globe.enableLighting = true
   // 显示 fps
   viewer.scene.debugShowFramesPerSecond = false
@@ -109,4 +113,28 @@ export default function useCesiumMap(viewerName = 'cesium3DContainer', extendCon
       // console.log('地图资源加载中')
     }
   })
+}
+
+/**
+ * 为cesimu添加天地图的底图
+ * @param viewer
+ * @param layer
+ * vec：矢量底图、cva：矢量标注、img：影像底图、cia：影像标注
+ * ter：地形晕渲、cta：地形标注、eva：矢量英文标注、eia：影像英文标注
+ */
+const addTMap = (viewer: Viewer, layer: string) => {
+  // 添加天地图影像注记底图
+  const subdomains = ['t0', 't1', 't2', 't3', 't4', 't5', 't6', 't7'];
+
+  const tMapImagery = new Cesium.WebMapTileServiceImageryProvider({
+    url: `http://{s}.tianditu.gov.cn/${layer}_w/wmts?&tk=a4025658edce72784329ea60fbbcb88a`,
+    layer,
+    style: "default",
+    tileMatrixSetID: "w",
+    format: "tiles",
+    maximumLevel: 18,
+    subdomains: subdomains
+  });
+
+  viewer.imageryLayers.addImageryProvider(tMapImagery)
 }
