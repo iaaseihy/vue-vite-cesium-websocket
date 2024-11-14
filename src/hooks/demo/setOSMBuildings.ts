@@ -4,9 +4,9 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-13 17:10:59
+ * @LastEditTime: 2024-11-14 14:55:31
  */
-import { Cesium3DTileset, Matrix3, Matrix4, Transforms, Math, Cartesian3 } from 'cesium'
+import { Cesium3DTileset, Matrix3, Matrix4, Transforms, Math, Cartesian3, Entity, ImageMaterialProperty, Color } from 'cesium'
 import useCesium from '/@/hooks/useCesium'
 
 export default function useSetOSMBuildings(viewer: ElRef) {
@@ -47,62 +47,120 @@ export function addPointCloud3Dtiles(viewer: ElRef) {
   });
 }
 
-export function addMovingModel(viewer: ElRef) {
-  const Cesium = useCesium();
-
-  // 确定模型的 URL 路径，假设 FBX 文件已转换为 glTF 格式并存放在 public 目录中
-  const modelUrl = `${import.meta.env.BASE_URL}model/diaoche3dtiles/tileset.json`; // 拼接模型路径
+export function addMovingModel(viewer: ElRef, dis: number) {
+	const Cesium = useCesium();
   
-  // 创建并加载 3D Tiles
-  let tileset = new Cesium.Cesium3DTileset({
-    url: modelUrl,
-    //控制切片视角显示的数量，可调整性能
-    // maximumScreenSpaceError: 2,
-    // maximumNumberOfLoadedTiles: 100000,
-  });
-
-  //控制模型的位置
-	tileset.readyPromise.then(function (tileset) {
-		//添加到场景
-		viewer.scene.primitives.add(tileset);
-		var longitude = 121.39048943 //模型需要改变的经度
-		var latitude = 31.0741399 //模型需要改变的纬度
-		var heightOffset = 18.0; //模型需要改变的高度
-
-		//获取3Dtlies的bounds范围
-		var boundingSphere = tileset.boundingSphere;
-		//获取3Dtlies的范围中心点的弧度
-		var cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
-		//定义3Dtlies改变之后中心点的弧度
-		var offsetvalue = Cesium.Cartographic.fromDegrees(longitude, latitude, heightOffset)
-
-		//模型本身的位置
-		var surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0);
-		//模型改变的位置
-		var offset = Cesium.Cartesian3.fromRadians(offsetvalue.longitude, offsetvalue.latitude, heightOffset);
-
-		//定义模型的改变状态
-		var translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
-		//修改模型的位置
-		tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
-		// viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(0.5, -0.2, tileset.boundingSphere.radius *
-		// 	1.0));
-    rotate(tileset, 10, 0, 26);
-    scale(tileset, 2, 2, 2);
+	// 确定模型的 URL 路径，假设 FBX 文件已转换为 glTF 格式并存放在 public 目录中
+	const modelUrl = `${import.meta.env.BASE_URL}model/diaoche3dtiles/tileset.json`; // 拼接模型路径
+	
+	// 创建并加载 3D Tiles
+	let tileset = new Cesium.Cesium3DTileset({
+	  url: modelUrl,
+	  // 控制切片视角显示的数量，可调整性能
+	  // maximumScreenSpaceError: 2,
+	  // maximumNumberOfLoadedTiles: 100000,
 	});
   
+	// 控制模型的位置
+	tileset.readyPromise.then(function (tileset) {
+	  // 添加到场景
+	  viewer.scene.primitives.add(tileset);
   
-  // 将 3D Tiles 加入到场景中
-  viewer.scene.primitives.add(tileset);
-
-  // 可选：设置视图以适应点云
-  tileset.readyPromise.then(() => {
-    viewer.scene.camera.flyToBoundingSphere(tileset.boundingSphere);
-  }).catch((error) => {
-    console.error('Failed to load 3D Tiles:', error);
-  });
-  return tileset;
-}
+	  const longitude = 121.39048943; // 模型需要改变的经度
+	  const latitude = 31.0741399; // 模型需要改变的纬度
+	  const heightOffset = 18.0; // 模型需要改变的高度
+  
+	  // 获取 3D Tiles 的 bounds 范围
+	  const boundingSphere = tileset.boundingSphere;
+	  // 获取 3D Tiles 的范围中心点的弧度
+	  const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
+	  // 定义 3D Tiles 改变之后中心点的弧度
+	  const offsetvalue = Cesium.Cartographic.fromDegrees(longitude, latitude, heightOffset)
+  
+	  // 模型本身的位置
+	  const surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0);
+	  // 模型改变的位置
+	  const offset = Cesium.Cartesian3.fromRadians(offsetvalue.longitude, offsetvalue.latitude, heightOffset);
+  
+	  // 定义模型的改变状态
+	  const translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
+	  // 修改模型的位置
+	  tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
+  
+	  rotate(tileset, 10, 0, 26);
+	  scale(tileset, 2, 2, 2);
+  
+	  // 添加围墙 (2m * 2m 红色围墙)
+	  let x = 1;
+	  let flog = true;
+	  let flashing = false; // 控制是否闪烁
+	  const wallEntity = viewer.entities.add({
+		name: "矩形区域闪烁",
+		position: Cesium.Cartesian3.fromDegrees(121.39024943, 31.0745799, heightOffset + 1),
+		box: {
+		  dimensions: new Cesium.Cartesian3(2, 2, 3), // 设置围墙为 2m * 2m * 3m
+		  material: new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(function () {
+			// 只有在距离小于3米时，才使用闪烁效果
+			if (flashing) {
+			  if (flog) {
+				x = x - 0.05;
+				if (x <= 0) {
+				  flog = false;
+				}
+			  } else {
+				x = x + 0.05;
+				if (x >= 1) {
+				  flog = true;
+				}
+			  }
+			  return Cesium.Color.RED.withAlpha(x); // 控制透明度，实现闪烁
+			} else {
+			  return Cesium.Color.RED.withAlpha(0.5); // 距离大于等于 3 米时，不闪烁，保持透明红色
+			}
+		  }, false))
+		}
+	  });
+  
+	  // 监测模型和围墙的距离
+	  const wallInterval = setInterval(() => {
+		if (tileset) {
+		  const modelPosition = tileset.boundingSphere.center;
+		  const wallPosition = wallEntity.position.getValue(Cesium.JulianDate.now());
+		  
+		  const distance = Cesium.Cartesian3.distance(modelPosition, wallPosition);
+  
+		  // 如果模型与围墙的距离小于3米，启动闪烁
+		  if (distance < dis && !flashing) {
+			flashing = true; // 启动闪烁
+		  }
+		  // 如果模型与围墙的距离大于等于3米，停止闪烁
+		  else if (distance >= dis && flashing) {
+			flashing = false; // 停止闪烁
+		  }
+		}
+	  }, 100); // 每 100 毫秒检查一次
+  
+	  // 清理定时器
+	  return () => {
+		if (wallInterval) {
+		  clearInterval(wallInterval);
+		}
+		flashing = false;
+	  };
+	});
+  
+	// 将 3D Tiles 加入到场景中
+	viewer.scene.primitives.add(tileset);
+  
+	// 可选：设置视图以适应点云
+	tileset.readyPromise.then(() => {
+	  viewer.scene.camera.flyToBoundingSphere(tileset.boundingSphere);
+	}).catch((error) => {
+	  console.error('Failed to load 3D Tiles:', error);
+	});
+  
+	return tileset;
+};
 
 /**
  * 启动 WebSocket 监听器
