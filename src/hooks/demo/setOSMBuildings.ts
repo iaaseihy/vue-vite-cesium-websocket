@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-15 14:29:48
+ * @LastEditTime: 2024-11-15 16:05:15
  */
 import { Cesium3DTileset, Matrix3, Matrix4, Transforms, Math, Cartesian3, Entity, ImageMaterialProperty, Color, ColorMaterialProperty, JulianDate, Viewer } from 'cesium'
 import useCesium from '/@/hooks/useCesium'
@@ -50,47 +50,36 @@ export function addPointCloud3Dtiles(viewer: ElRef) {
 
 // 添加多个模型
 export function addMovingModels(viewer: ElRef, models: { id: number, url: string }[], dis: number) {
-	const Cesium = useCesium();
-  
-	const tilesets: Cesium3DTileset[] = [];
+	const Cesium = useCesium()
   
 	models.forEach(model => {
 	  const tileset = new Cesium.Cesium3DTileset({
 		url: model.url
-	  });
+	  })
   
-	  // 添加到场景
-	  viewer.scene.primitives.add(tileset);
-	  tilesets.push(tileset);
+	  viewer.scene.primitives.add(tileset)
   
 	  tileset.readyPromise.then(() => {
-		const longitude = 121.39048943;
-		const latitude = 31.0741399;
-		const heightOffset = 18.0;
+		const longitude = 121.39048943
+		const latitude = 31.0741399
+		const heightOffset = 18.0
   
-		const boundingSphere = tileset.boundingSphere;
-		const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
-		const offsetvalue = Cesium.Cartographic.fromDegrees(longitude, latitude, heightOffset);
+		const boundingSphere = tileset.boundingSphere
+		const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center)
+		const offsetvalue = Cesium.Cartographic.fromDegrees(longitude, latitude, heightOffset)
   
-		const surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0);
-		const offset = Cesium.Cartesian3.fromRadians(offsetvalue.longitude, offsetvalue.latitude, heightOffset);
+		const surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0)
+		const offset = Cesium.Cartesian3.fromRadians(offsetvalue.longitude, offsetvalue.latitude, heightOffset)
   
-		const translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
-		tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
-  
+		const translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3())
+		tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation)
 		rotate(tileset, 10, 0, 26);
 		scale(tileset, 2, 2, 2);
-  
 		// 添加围墙 (2m * 2m 红色围墙)
 		addWallEffect(viewer, tileset, dis);
-	  });
-  
-	  // WebSocket监听器
-	  startWebSocketListenerForModel(tileset, model.id, dis);
-	});
-  
-	return tilesets;
-  }
+	  })
+	})
+}
 
 /**
  * 启动 WebSocket 监听器
@@ -140,80 +129,83 @@ let x = 1;  // 透明度初始值
 let flog = true;  // 控制透明度增减
 let flashing = false;  // 控制是否闪烁
 
-// 添加围墙效果
-function addWallEffect(viewer: Viewer, tileset: Cesium3DTileset, dis: number) {
-  // 设置围墙的初始位置
-  const wallPosition = Cesium.Cartesian3.fromDegrees(121.390179, 31.074584, 19); // 使用指定的经纬度和高度
+// 在外部定义 wallEntity 变量
+export let wallEntity: Cesium.Entity | null = null;
 
-  // 添加围墙
-  const wallEntity = viewer.entities.add({
-    name: "围墙",
-    position: wallPosition, // 使用固定的位置
-    box: {
-      dimensions: new Cesium.Cartesian3(2, 2, 3), // 设置围墙为 2m * 2m * 3m
-      material: new Cesium.ColorMaterialProperty(Cesium.Color.RED.withAlpha(0.5)), // 初始颜色为透明红色
-    }
-  });
-
-  // 定时器检查距离并更新闪烁状态
-  const wallInterval = setInterval(() => {
-    updateWallFlashingEffect(tileset, wallEntity, dis);
-  }, 200); // 每 100 毫秒检查一次
-
-  // 清理定时器
-  return () => {
-    if (wallInterval) {
-      clearInterval(wallInterval);
-    }
-  };
-}
+// 用于创建围墙并保存 wallEntity 引用
+export function addWallEffect(viewer: Cesium.Viewer, tileset: Cesium.Cesium3DTileset, dis: number) {
+	// 创建围墙并保存实体引用
+	wallEntity = viewer.entities.add({
+	  name: "围墙",
+	  position: Cesium.Cartesian3.fromDegrees(121.390179, 31.074584, 19),
+	  box: {
+		dimensions: new Cesium.Cartesian3(2, 2, 3),
+		material: new Cesium.ColorMaterialProperty(Cesium.Color.RED.withAlpha(0.5)),
+	  }
+	});
+  
+	// 定时器每隔一定时间检查与模型的距离
+	// const wallInterval = setInterval(() => {
+	//   if (wallEntity) {
+	// 	updateWallFlashingEffect(tileset, wallEntity, dis);
+	//   }
+	// }, 200); // 每200ms检查一次
+  
+	// 清理定时器
+	// return () => {
+	//   clearInterval(wallInterval);
+	// };
+  }
 
 // 更新围墙闪烁效果
-function updateWallFlashingEffect(tileset: Cesium.Cesium3DTileset, wallEntity: Cesium.Entity, dis: number) {
-  // 获取模型的位置
-  const modelPosition = tileset.boundingSphere.center;
-
-  // 获取围墙的位置
-  const wallPosition = wallEntity.position.getValue(Cesium.JulianDate.now());
-
-  if (!wallPosition) {
-    console.warn("Wall entity position is not available");
-    return;
+export function updateWallFlashingEffect(tileset: Cesium.Cesium3DTileset, wallEntity: Cesium.Entity, dis: number) {
+	const modelPosition = tileset.boundingSphere.center;
+	console.log('Model Position:', modelPosition);
+	
+	const wallPosition = wallEntity.position.getValue(Cesium.JulianDate.now());
+	console.log('Wall Position:', wallPosition);  // 检查位置
+	
+	if (!wallPosition) {
+	  console.warn("Wall entity position is not available");
+	  return;
+	}
+  
+	// 计算模型与围墙的距离
+	const distance = Cesium.Cartesian3.distance(modelPosition, wallPosition);
+	console.log('Distance:', distance);  // 检查距离值
+	
+	// 如果模型与围墙的距离小于阈值，启动闪烁效果
+	if (distance < dis && !flashing) {
+	  flashing = true; // 启动闪烁
+	  console.log("Flashing started");
+	} 
+	// 如果模型与围墙的距离大于等于阈值，停止闪烁
+	else if (distance >= dis && flashing) {
+	  flashing = false; // 停止闪烁
+	  console.log("Flashing stopped");
+	}
+  
+	// 更新围墙材质的闪烁效果
+	wallEntity.box.material = new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(() => {
+	  if (flashing) {
+		if (flog) {
+		  x = x - 0.005; // 透明度递减
+		  if (x <= 0) {
+			flog = false; // 透明度降到0时，开始增大透明度
+		  }
+		} else {
+		  x = x + 0.005; // 透明度递增
+		  if (x >= 1) {
+			flog = true; // 透明度增到1时，开始减小透明度
+		  }
+		}
+		return Cesium.Color.RED.withAlpha(x); // 返回带透明度的颜色
+	  } else {
+		return Cesium.Color.RED.withAlpha(0.5); // 当不闪烁时，围墙为固定红色透明
+	  }
+	}, false));
   }
-
-  // 计算模型与围墙的距离
-  const distance = Cesium.Cartesian3.distance(modelPosition, wallPosition);
-
-  // 如果模型与围墙的距离小于阈值，启动闪烁效果
-  if (distance < dis && !flashing) {
-    flashing = true; // 启动闪烁
-  } 
-  // 如果模型与围墙的距离大于等于阈值，停止闪烁
-  else if (distance >= dis && flashing) {
-    flashing = false; // 停止闪烁
-  }
-
-  // 更新围墙材质的闪烁效果
-  wallEntity.box.material = new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(() => {
-    if (flashing) {
-      if (flog) {
-        x = x - 0.005; // 透明度递减
-        if (x <= 0) {
-          flog = false; // 透明度降到0时，开始增大透明度
-        }
-      } else {
-        x = x + 0.005; // 透明度递增
-        if (x >= 1) {
-          flog = true; // 透明度增到1时，开始减小透明度
-        }
-      }
-      return Cesium.Color.RED.withAlpha(x); // 返回带透明度的颜色
-    } else {
-      return Cesium.Color.RED.withAlpha(0.5); // 当不闪烁时，围墙为固定红色透明
-    }
-  }, false));
-}
-
+  
   
   
 /**基于本地的ENU坐标系的旋转，也就是垂直于地表向上为Z，东为X，北为Y
