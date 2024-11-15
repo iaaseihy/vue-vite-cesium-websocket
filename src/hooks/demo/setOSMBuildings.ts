@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-15 16:05:15
+ * @LastEditTime: 2024-11-15 16:48:52
  */
 import { Cesium3DTileset, Matrix3, Matrix4, Transforms, Math, Cartesian3, Entity, ImageMaterialProperty, Color, ColorMaterialProperty, JulianDate, Viewer } from 'cesium'
 import useCesium from '/@/hooks/useCesium'
@@ -178,32 +178,34 @@ export function updateWallFlashingEffect(tileset: Cesium.Cesium3DTileset, wallEn
 	if (distance < dis && !flashing) {
 	  flashing = true; // 启动闪烁
 	  console.log("Flashing started");
+	  // 更新围墙材质的闪烁效果
+	wallEntity.box.material = new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(() => {
+		if (flashing) {
+		  if (flog) {
+			x = x - 0.005; // 透明度递减
+			if (x <= 0) {
+			  flog = false; // 透明度降到0时，开始增大透明度
+			}
+		  } else {
+			x = x + 0.005; // 透明度递增
+			if (x >= 1) {
+			  flog = true; // 透明度增到1时，开始减小透明度
+			}
+		  }
+		  return Cesium.Color.RED.withAlpha(x); // 返回带透明度的颜色
+		} else {
+		  return Cesium.Color.RED.withAlpha(0.5); // 当不闪烁时，围墙为固定红色透明
+		}
+	  }, false));
 	} 
 	// 如果模型与围墙的距离大于等于阈值，停止闪烁
 	else if (distance >= dis && flashing) {
 	  flashing = false; // 停止闪烁
 	  console.log("Flashing stopped");
+	  wallEntity.box.material = new Cesium.ColorMaterialProperty(Cesium.Color.RED.withAlpha(0.5)); // 恢复为固定红色透明
 	}
   
-	// 更新围墙材质的闪烁效果
-	wallEntity.box.material = new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(() => {
-	  if (flashing) {
-		if (flog) {
-		  x = x - 0.005; // 透明度递减
-		  if (x <= 0) {
-			flog = false; // 透明度降到0时，开始增大透明度
-		  }
-		} else {
-		  x = x + 0.005; // 透明度递增
-		  if (x >= 1) {
-			flog = true; // 透明度增到1时，开始减小透明度
-		  }
-		}
-		return Cesium.Color.RED.withAlpha(x); // 返回带透明度的颜色
-	  } else {
-		return Cesium.Color.RED.withAlpha(0.5); // 当不闪烁时，围墙为固定红色透明
-	  }
-	}, false));
+	
   }
   
   
