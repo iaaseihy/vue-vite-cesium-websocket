@@ -36,7 +36,7 @@ export default function useCesiumMap(viewerName = 'cesium3DContainer', extendCon
     baseLayerPicker: false, // 基础影响图层选择器
     navigationHelpButton: false, // 导航帮助按钮
     animation: false, // 动画控件
-    timeline: false, // 时间控件
+    timeline: true, // 时间控件
     shadows: false, // 显示阴影
     shouldAnimate: true, // 模型动画效果 大气
     // skyBox: false, // 天空盒

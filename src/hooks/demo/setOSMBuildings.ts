@@ -56,7 +56,7 @@ export function addMovingModels(viewer: ElRef, models: { id: number, url: string
 	  const tileset = new Cesium.Cesium3DTileset({
 		url: model.url
 	  })
-  
+	  tileset.id = model.id; // Adding a unique ID property to the tileset
 	  viewer.scene.primitives.add(tileset)
   
 	  tileset.readyPromise.then(() => {
