@@ -117,6 +117,9 @@ window.CViewer.scene.camera.flyToBoundingSphere(boundingSphere);
     // simulateWebSocketData()
     addWallEffect(window.CViewer);
     // addModelEntity(window.CViewer, models);
+    const point = { lng: 121.397179, lat: 31.074184 }; // 要判断的点
+const isInside = isPointInsideWall(window.CViewer, wallEntityModel, point);
+console.log("点是否在围墙内部:", isInside);
     simulateModelMoving(window.CViewer, trajectory, 30);
   }
 
@@ -378,7 +381,8 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
     // 模型
     model: {
       uri: 'gltf/diaoche.glb',
-      minimumPixelSize: 128
+      minimumPixelSize: 64, // 您可以尝试减少这个值
+      scale: 1.0, // 根据您的需要调整比例尺
     },
     path: {
       resolution: 1,
@@ -409,7 +413,7 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
     let lng = Cesium.Math.toDegrees(cartographic.longitude);
     let alt = cartographic.height;
     // viewer.scene.camera.setView({
-    //   destination: Cartesian3.fromDegrees(lng, lat, 100),
+    //   destination: Cartesian3.fromDegrees(lng, lat, 300),
     //   // orientation: {
     //   //   heading, 
     //   //   pitch,    
@@ -466,6 +470,53 @@ const createProperty = (source, start) => {
     }
     return property;
 }
+
+//判断点是否在多边形内
+const isPointInsideWall = (viewer, wallEntity, point) => {
+  if (!wallEntity || !wallEntity.box || !wallEntity.position) {
+    console.error("Invalid wall entity");
+    return false;
+  }
+
+  // 获取围墙中心位置（Cartesian3）
+  const wallCenterCartesian = wallEntity.position.getValue(Cesium.JulianDate.now());
+  const ellipsoid = viewer.scene.globe.ellipsoid;
+
+  // 转换中心位置到地理坐标
+  const wallCenterCartographic = ellipsoid.cartesianToCartographic(wallCenterCartesian);
+  const wallLat = Cesium.Math.toDegrees(wallCenterCartographic.latitude);
+  const wallLng = Cesium.Math.toDegrees(wallCenterCartographic.longitude);
+  const wallHeight = wallCenterCartographic.height;
+
+  // 获取围墙尺寸
+  const dimensions = wallEntity.box.dimensions.getValue(Cesium.JulianDate.now());
+  const halfWidth = dimensions.x / 2;
+  const halfDepth = dimensions.y / 2;
+
+  // 计算围墙四个顶点的经纬度
+  const corners = [
+    { lat: wallLat + halfDepth / 111320, lng: wallLng - halfWidth / (111320 * Math.cos(Cesium.Math.toRadians(wallLat))) }, // 左上
+    { lat: wallLat + halfDepth / 111320, lng: wallLng + halfWidth / (111320 * Math.cos(Cesium.Math.toRadians(wallLat))) }, // 右上
+    { lat: wallLat - halfDepth / 111320, lng: wallLng + halfWidth / (111320 * Math.cos(Cesium.Math.toRadians(wallLat))) }, // 右下
+    { lat: wallLat - halfDepth / 111320, lng: wallLng - halfWidth / (111320 * Math.cos(Cesium.Math.toRadians(wallLat))) }  // 左下
+  ];
+
+  // 判断点是否在围墙多边形内
+  const isPointInPolygon = (point, polygon) => {
+    let inside = false;
+    const x = point.lng, y = point.lat;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i].lng, yi = polygon[i].lat;
+      const xj = polygon[j].lng, yj = polygon[j].lat;
+
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  };
+
+  return isPointInPolygon(point, corners);
+};
 
   onUnmounted(() => {
     if (socket) {
