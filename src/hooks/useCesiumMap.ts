@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-14 16:33:28
+ * @LastEditTime: 2024-11-23 10:20:29
  */
 import useCesium from '/@/hooks/useCesium'
 const Cesium = useCesium()
@@ -96,7 +96,7 @@ export default function useCesiumMap(viewerName = 'cesium3DContainer', extendCon
   //     roll: 0.0,
   //   },
   // })
-  // viewer.clock.shouldAnimate = true
+  viewer.clock.shouldAnimate = true
   viewer.cesiumWidget.creditContainer.setAttribute('style', 'display:none');
   viewer.scene.debugShowFramesPerSecond = true; // 显示调试帧率显示
   window.CViewer = viewer
