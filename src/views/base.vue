@@ -198,7 +198,7 @@ const mapOnReady = () => {
     // addWallEffect(window.CViewer);
     // 秀东一线
     // addWallEntityLon(window.CViewer, dongkeLineCorners, 10);
-    addWallEntity(window.CViewer, dongkeLineCorners, 1046, 1050, 0);
+    addWallEntity(window.CViewer, dongkeLineCorners, 1046, 4, 0);
     // 添加鼠标事件监听
     // addMouseEvents(window.CViewer);
     const point = { lng: 111.753957, lat: 40.820835 };
@@ -307,7 +307,7 @@ const addWallEntityLon = (viewer: Viewer, wallCorners: any, height: number, rota
 };
 
 
-const addWallEntity = (viewer: Viewer, wallCorners: any, bottomHeight: number, topHeight: number, rotationDegrees: number) => {
+const addWallEntity = (viewer: Viewer, wallCorners: any, bottomHeight: number, extrudeHeight: number, rotationDegrees: number) => {
   // 将角度转换为弧度
   const rotationRadians = Cesium.Math.toRadians(rotationDegrees);
 
@@ -340,7 +340,7 @@ const addWallEntity = (viewer: Viewer, wallCorners: any, bottomHeight: number, t
     Cesium.Cartesian3.fromDegrees(corner.lon, corner.lat, bottomHeight)
   );
   const topPositions = rotatedCorners.map((corner: any) =>
-    Cesium.Cartesian3.fromDegrees(corner.lon, corner.lat, topHeight)
+    Cesium.Cartesian3.fromDegrees(corner.lon, corner.lat, bottomHeight + extrudeHeight)
   );
 
   // 创建多边形围墙体
@@ -348,7 +348,7 @@ const addWallEntity = (viewer: Viewer, wallCorners: any, bottomHeight: number, t
     polygon: {
       hierarchy: new Cesium.PolygonHierarchy(bottomPositions),
       material: Cesium.Color.RED.withAlpha(0.5), // 半透明红色
-      extrudedHeight: topHeight,                // 顶部高度
+      extrudedHeight: bottomHeight + extrudeHeight,                // 顶部高度
       height: bottomHeight,                     // 底部高度
       outline: true,
       outlineColor: Cesium.Color.BLACK,         // 黑色轮廓
