@@ -76,6 +76,7 @@ const wallCornersLinexiudong1 = [
   { lon: 111.733838, lat: 40.8351044, height: 1047.213 },  // 西北角
 ];
 
+// 秀东2线可用
 const wallCornersxiudong2 = [
   { lon: 111.733838, lat: 40.8351044, height: 1045.213 }, // 东北
   { lon: 111.7339959, lat: 40.8346915, height: 1045.195 }, // 东南
@@ -101,84 +102,15 @@ const dongkeLineCorners = [
 
 let mockDataIndex = 0
 
-const simulateWebSocket = () => {
-  const interval = setInterval(() => {
-    if (mockDataIndex >= trajectory.length) {
-      clearInterval(interval)
-      return
-    }
-
-    const data = trajectory[mockDataIndex]
-    socket.onmessage({ data: JSON.stringify(data) })
-
-    mockDataIndex++
-  }, 1000) // 每秒发送一个位置数据
-}
-
-// 启动 WebSocket 监听器
-const startWebSocketListenerForModel = (tileset: Cesium3DTileset, modelId: number) => {
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    const { x, y, z, id } = data
-
-    if (id === modelId) {
-      // 更新模型位置
-      const offset = Cartesian3.fromDegrees(x, y, z)
-      const origin = tileset.boundingSphere.center
-      const translation = Cartesian3.subtract(offset, origin, new Cartesian3())
-
-      const translationMatrix = Matrix4.fromTranslation(translation)
-      tileset.modelMatrix = Matrix4.multiply(translationMatrix, tileset.modelMatrix, new Matrix4())
-      // 每次更新模型位置后，检查与围墙的距离
-      updateWallFlashingEffect(tileset, wallEntity, distance);
-    }
-  }
-}
-
 const handleSelect = (value: string) => {
   router.push({ name: value })
 }
 
-const connectWebSocket = () => {
-  socket = new WebSocket('ws://124.223.76.185:9021/beidou');
-
-  socket.onopen = () => {
-    console.log('WebSocket connection opened');
-    // 示例：发送 deviceId
-const deviceId = '08C4B14015122046';
-sendMessage(deviceId);
-
-  };
-
-  socket.onmessage = (event) => {
-    console.log('Message received:', event.data);
-    messageLog.value.push(event.data);
-  };
-
-  socket.onerror = (error) => {
-    console.error('WebSocket error:', error);
-  };
-
-  socket.onclose = () => {
-    console.log('WebSocket connection closed');
-  };
-};
-
-// 发送消息的函数
-const sendMessage = (message) => {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(message); // 直接发送字符串
-    console.log('Message sent:', message);
-  } else {
-    console.error('WebSocket is not open. Cannot send message.');
-  }
-};
-
 const mapOnReady = () => {
   addPointCloud3Dtiles(window.CViewer)
-  
+
   connectWebSocket();
-  
+
   // window.CViewer.camera.flyTo({
   //   destination: Cesium.Cartesian3.fromDegrees(111.732393, 40.83473, 1500),
   //   orientation: {
@@ -195,9 +127,7 @@ const mapOnReady = () => {
   });
 
   setTimeout(() => {
-    // addWallEffect(window.CViewer);
     // 秀东一线
-    // addWallEntityLon(window.CViewer, dongkeLineCorners, 10);
     addWallEntity(window.CViewer, dongkeLineCorners, 1046, 4, 0);
     // 添加鼠标事件监听
     // addMouseEvents(window.CViewer);
@@ -232,80 +162,40 @@ const mapOnReady = () => {
   //     simulateModelMoving(window.CViewer, trajectory, 30);
 }
 
-const addMouseEvents = (viewer: Viewer) => {
-  const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+const connectWebSocket = () => {
+  socket = new WebSocket('ws://124.223.76.185:9021/beidou');
 
-  // 鼠标移动事件
-  handler.setInputAction((movement) => {
-    const cartesian = viewer.scene.camera.pickEllipsoid(movement.endPosition, Cesium.Ellipsoid.WGS84);
+  socket.onopen = () => {
+    console.log('WebSocket connection opened');
+    // 示例：发送 deviceId
+    const deviceId = '08C4B14015122046';
+    sendMessage(deviceId);
 
-    if (cartesian) {
-      const cartographic = Cesium.Ellipsoid.WGS84.cartesianToCartographic(cartesian);
-      const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(8);
-      const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(8);
+  };
 
-      // console.log(`当前鼠标位置: 经度: ${longitude}, 纬度: ${latitude}`);
-    }
-  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+  socket.onmessage = (event) => {
+    console.log('Message received:', event.data);
+    messageLog.value.push(event.data);
+  };
 
-  // 鼠标中键点击事件
-  handler.setInputAction((click) => {
-    const cartesian = viewer.scene.camera.pickEllipsoid(click.position, Cesium.Ellipsoid.WGS84);
+  socket.onerror = (error) => {
+    console.error('WebSocket error:', error);
+  };
 
-    if (cartesian) {
-      const cartographic = Cesium.Ellipsoid.WGS84.cartesianToCartographic(cartesian);
-      const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(8);
-      const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(8);
-
-      console.log(`鼠标中键点击位置: 经度: ${longitude}, 纬度: ${latitude}`);
-    }
-  }, Cesium.ScreenSpaceEventType.MIDDLE_CLICK);
+  socket.onclose = () => {
+    console.log('WebSocket connection closed');
+  };
 };
 
-const addWallEntityLon = (viewer: Viewer, wallCorners: any, height: number, rotationAngle: number) => {
-  // 计算作业区域的中心点（经纬度和高度的平均值）
-  let centerLon = 0;
-  let centerLat = 0;
-  let centerHeight = 0;
-
-  wallCorners.forEach((corner: any) => {
-    centerLon += corner.lon;
-    centerLat += corner.lat;
-    centerHeight += corner.height;
-  });
-
-  const totalCorners = wallCorners.length;
-  centerLon /= totalCorners;
-  centerLat /= totalCorners;
-  centerHeight /= totalCorners;
-
-  // 计算作业区域的长、宽和高度
-  const length = Math.abs(wallCorners[0].lon - wallCorners[1].lon) * 111320 * 2.8; // 经纬度转换为米
-  const width = Math.abs(wallCorners[0].lat - wallCorners[3].lat) * 111320 * 3.5; // 经纬度转换为米
-
-  // 计算旋转角度
-  const heading = Cesium.Math.toRadians(-18); // 将角度转换为弧度
-  const pitch = 0; // 不需要俯仰旋转
-  const roll = 0; // 不需要翻转旋转
-
-  // 计算围墙的旋转方向
-  const orientation = Cesium.Transforms.headingPitchRollQuaternion(
-    Cesium.Cartesian3.fromDegrees(centerLon, centerLat, centerHeight), // 中心点位置
-    new Cesium.HeadingPitchRoll(heading, pitch, roll) // 指定旋转角度
-  );
-
-  // 创建立方体围墙体
-  wallEntityModel = viewer.entities.add({
-    name: "围墙",
-    position: Cartesian3.fromDegrees(centerLon, centerLat, centerHeight), // 中心点
-    orientation: orientation, // 添加旋转方向
-    box: {
-      dimensions: new Cartesian3(width, length, height), // 长、宽、高
-      material: new ColorMaterialProperty(Color.RED.withAlpha(0.5)), // 红色半透明材质
-    },
-  });
+// 发送消息的函数
+const sendMessage = (message) => {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(message); // 直接发送字符串
+    console.log('Message sent:', message);
+  } else {
+    console.error('WebSocket is not open. Cannot send message.');
+  }
 };
-
 
 const addWallEntity = (viewer: Viewer, wallCorners: any, bottomHeight: number, extrudeHeight: number, rotationDegrees: number) => {
   // 将角度转换为弧度
@@ -370,229 +260,6 @@ const addWallEntity = (viewer: Viewer, wallCorners: any, bottomHeight: number, e
   //   },
   //   duration: 2, // 飞行时间
   // });
-};
-
-const addWallEffect = (viewer: Viewer) => {
-  // 创建围墙并保存实体引用
-  wallEntityModel = viewer.entities.add({
-    name: "围墙",
-    // position: Cartesian3.fromDegrees(121.390179, 31.074584, 19),
-    position: Cartesian3.fromDegrees(111.731383, 40.834756, 1050),
-    box: {
-      dimensions: new Cartesian3(10, 10, 5),
-      material: new ColorMaterialProperty(Color.RED.withAlpha(0.5)),
-    }
-  });
-};
-
-// 启动 WebSocket 模拟
-const simulateWebSocketData = () => {
-  // 初始化模型的 WebSocket 模拟
-  socket = {
-    onmessage: (event: { data: string }) => {
-      const data = JSON.parse(event.data);
-      const { x, y, z, id } = data;
-
-      // 查找对应的模型并更新位置
-      if (id === 54) {  // 模型ID为54的吊机
-        // 更新模型位置
-        const offset = Cartesian3.fromDegrees(x, y, z);
-        const tileset = models.find(model => model.id === id);
-        if (tileset) {
-          const origin = tileset.boundingSphere.center;
-          const translation = Cartesian3.subtract(offset, origin, new Cartesian3());
-          const translationMatrix = Matrix4.fromTranslation(translation);
-          tileset.modelMatrix = Matrix4.multiply(translationMatrix, tileset.modelMatrix, new Matrix4());
-
-          // 每次更新模型位置后，检查与围墙的距离
-          updateWallFlashingEffect(tileset, wallEntity, distance);
-        }
-      }
-    }
-  };
-
-  // 启动模拟 WebSocket 数据接收
-  simulateWebSocket();
-};
-
-const addModelEntity = (viewer: Viewer, models: any[]) => {
-  const position = Cartesian3.fromDegrees(
-    121.39048943,
-    31.0741399,
-    18.0
-  );
-  models && models.forEach((point) => {
-    const entity = viewer.entities.add({
-      id: point.id,
-      name: point.id,
-      position: position,
-      model: {
-        uri: 'gltf/diaoche.glb',
-        minimumPixelSize: 128, // 最小像素尺寸
-        maximumScale: 20, // 最大比例
-        scale: 0.01 // 比例
-      },
-      path: {
-        resolution: 1,
-        material: new PolylineGlowMaterialProperty({
-          glowPower: 0.1,
-          color: Color.YELLOW
-        }),
-        // leadTime、trailTime 不设置 path全显示
-        // leadTime:0,// 设置为0时 模型通过后显示path
-        trailTime: 0,// 设置为0时 模型通过后隐藏path
-        width: 10
-      }
-    })
-  });
-  viewer.scene.globe.enableLighting = true; // 开启光照
-  const bloom = viewer.scene.postProcessStages.bloom;
-  bloom.enabled = true;
-  bloom.uniforms.glowOnly = false;
-  bloom.uniforms.contrast = 128;
-  bloom.uniforms.brightness = -0.45;
-};
-
-
-const simulateModelMoving2 = (viewer: Viewer, trajectory: any[]) => {
-  // Define the total duration as the length of the trajectory in seconds
-  const totalDuration = trajectory.length; // Total duration in seconds
-  const numPoints = trajectory.length;
-  const timeInterval = totalDuration / (numPoints - 1); // Time interval between each point
-
-  // Create an array to store the position data
-  const positionData = [];
-  for (let i = 0; i < trajectory.length; ++i) {
-    positionData.push({
-      longitude: Number(trajectory[i].x),
-      latitude: Number(trajectory[i].y),
-      height: Number(trajectory[i].z),
-      time: i * timeInterval // Adjusted time interval
-    });
-  }
-
-  // Create a sampled position property for interpolation
-  const positionSampler = new SampledPositionProperty();
-  positionSampler.setInterpolationOptions({
-    interpolationDegree: 2,
-    interpolationAlgorithm: HermitePolynomialApproximation
-  });
-
-  // Define the start time for the animation
-  const start = JulianDate.fromDate(new Date(2023, 2, 29));
-
-  // Add samples to the position sampler
-  for (let i = 0; i < positionData.length; i++) {
-    const data = positionData[i];
-    const time = JulianDate.addSeconds(start, data.time, new JulianDate());
-    const position = Cartesian3.fromDegrees(data.longitude, data.latitude, data.height);
-    positionSampler.addSample(time, position);
-  }
-
-  // Retrieve the entity by ID and set its position and orientation
-  const entity = viewer.entities.getById("54");
-  entity.position = positionSampler;
-  entity.orientation = new VelocityOrientationProperty(positionSampler); // Orient the model based on movement direction
-
-  // Define the clock parameters for the viewer
-  const stop = JulianDate.addSeconds(start, totalDuration, new JulianDate()); // Ensure the stop time matches the total duration
-
-  viewer.clock.startTime = start.clone();
-  viewer.clock.stopTime = stop.clone();
-  viewer.clock.currentTime = start.clone();
-  viewer.clock.shouldAnimate = true;
-  viewer.clock.clockRange = ClockRange.CLAMPED; // Ensure the clock stops when reaching the end time
-  viewer.clock.multiplier = 1;
-
-  // Set the camera to follow the moving entity
-  viewer.trackedEntity = entity;
-};
-
-const simulateModelMoving1 = (viewer: Viewer, trajectory: any[]) => {
-  const totalDuration = trajectory.length; // Total duration in seconds
-  const numPoints = trajectory.length;
-  const timeInterval = totalDuration / (numPoints - 1); // Time interval between each point
-
-  const positionData = [];
-  for (let i = 0; i < trajectory.length; ++i) {
-    positionData.push({
-      longitude: Number(trajectory[i].x),
-      latitude: Number(trajectory[i].y),
-      height: Number(trajectory[i].z),
-      time: i * timeInterval // Adjusted time interval
-    });
-  }
-
-  const positionSampler = new SampledPositionProperty();
-  positionSampler.setInterpolationOptions({
-    interpolationDegree: 2,
-    interpolationAlgorithm: HermitePolynomialApproximation
-  });
-
-  let start = Cesium.JulianDate.fromDate(new Date());
-  for (let i = 0; i < positionData.length; i++) {
-    const data = positionData[i];
-    const time = JulianDate.addSeconds(start, data.time, new JulianDate());
-    const position = Cartesian3.fromDegrees(data.longitude, data.latitude, data.height);
-    positionSampler.addSample(time, position);
-  }
-
-  const entity = viewer.entities.getById("54");
-  if (!entity) {
-    console.error("Entity with ID 54 not found");
-    return;
-  }
-  entity.position = positionSampler;
-  entity.orientation = new VelocityOrientationProperty(positionSampler);
-
-  const stop = JulianDate.addSeconds(start, totalDuration, new JulianDate());
-  viewer.clock.startTime = start.clone();
-  viewer.clock.stopTime = stop.clone();
-  viewer.clock.currentTime = start.clone();
-  viewer.clock.shouldAnimate = true;
-  viewer.clock.clockRange = ClockRange.CLAMPED; // Ensure the clock stops when reaching the end time
-  viewer.clock.multiplier = 1;
-  // 时间轴
-  viewer.timeline.zoomTo(start, stop);
-  // viewer.trackedEntity = entity;
-
-  viewer.clock.onTick.addEventListener((tick) => {
-    if (!wallEntityModel || !entity.position) {
-      console.warn("Wall entity or entity position is not available");
-      return;
-    }
-
-
-    const entityPosition = viewer.entities.getById('54').position.getValue(tick.currentTime)
-    if (!entityPosition) {
-      console.warn("Entity position is not available at the current time");
-      return;
-    }
-
-    const wallPosition = wallEntityModel.position._value;
-    if (!wallPosition) {
-      console.warn("Wall entity position is not available at the current time");
-      return;
-    }
-
-    // 检查位置变化
-    console.log("currentTime:", tick.currentTime);
-
-    const distance = Cartesian3.distance(entityPosition, wallPosition);
-    console.log("Distance between entity and wall:", distance);
-
-    if (distance < 20) {
-      wallEntityModel.box.material = new ColorMaterialProperty(
-        new CallbackProperty(() => {
-          const alpha = 0.5 + 0.5 * Math.sin(viewer.clock.currentTime.secondsOfDay * 2);
-          return Color.RED.withAlpha(alpha);
-        }, false)
-      );
-    } else {
-      wallEntityModel.box.material = new ColorMaterialProperty(Color.RED.withAlpha(0.5));
-    }
-  });
-
 };
 
 const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => {
@@ -795,6 +462,334 @@ const isPointInsideWall = (viewer, wallEntity, point) => {
   return isPointInPolygon(point, polygonCorners);
 };
 
+const simulateModelMoving2 = (viewer: Viewer, trajectory: any[]) => {
+  // Define the total duration as the length of the trajectory in seconds
+  const totalDuration = trajectory.length; // Total duration in seconds
+  const numPoints = trajectory.length;
+  const timeInterval = totalDuration / (numPoints - 1); // Time interval between each point
+
+  // Create an array to store the position data
+  const positionData = [];
+  for (let i = 0; i < trajectory.length; ++i) {
+    positionData.push({
+      longitude: Number(trajectory[i].x),
+      latitude: Number(trajectory[i].y),
+      height: Number(trajectory[i].z),
+      time: i * timeInterval // Adjusted time interval
+    });
+  }
+
+  // Create a sampled position property for interpolation
+  const positionSampler = new SampledPositionProperty();
+  positionSampler.setInterpolationOptions({
+    interpolationDegree: 2,
+    interpolationAlgorithm: HermitePolynomialApproximation
+  });
+
+  // Define the start time for the animation
+  const start = JulianDate.fromDate(new Date(2023, 2, 29));
+
+  // Add samples to the position sampler
+  for (let i = 0; i < positionData.length; i++) {
+    const data = positionData[i];
+    const time = JulianDate.addSeconds(start, data.time, new JulianDate());
+    const position = Cartesian3.fromDegrees(data.longitude, data.latitude, data.height);
+    positionSampler.addSample(time, position);
+  }
+
+  // Retrieve the entity by ID and set its position and orientation
+  const entity = viewer.entities.getById("54");
+  entity.position = positionSampler;
+  entity.orientation = new VelocityOrientationProperty(positionSampler); // Orient the model based on movement direction
+
+  // Define the clock parameters for the viewer
+  const stop = JulianDate.addSeconds(start, totalDuration, new JulianDate()); // Ensure the stop time matches the total duration
+
+  viewer.clock.startTime = start.clone();
+  viewer.clock.stopTime = stop.clone();
+  viewer.clock.currentTime = start.clone();
+  viewer.clock.shouldAnimate = true;
+  viewer.clock.clockRange = ClockRange.CLAMPED; // Ensure the clock stops when reaching the end time
+  viewer.clock.multiplier = 1;
+
+  // Set the camera to follow the moving entity
+  viewer.trackedEntity = entity;
+};
+
+const simulateModelMoving1 = (viewer: Viewer, trajectory: any[]) => {
+  const totalDuration = trajectory.length; // Total duration in seconds
+  const numPoints = trajectory.length;
+  const timeInterval = totalDuration / (numPoints - 1); // Time interval between each point
+
+  const positionData = [];
+  for (let i = 0; i < trajectory.length; ++i) {
+    positionData.push({
+      longitude: Number(trajectory[i].x),
+      latitude: Number(trajectory[i].y),
+      height: Number(trajectory[i].z),
+      time: i * timeInterval // Adjusted time interval
+    });
+  }
+
+  const positionSampler = new SampledPositionProperty();
+  positionSampler.setInterpolationOptions({
+    interpolationDegree: 2,
+    interpolationAlgorithm: HermitePolynomialApproximation
+  });
+
+  let start = Cesium.JulianDate.fromDate(new Date());
+  for (let i = 0; i < positionData.length; i++) {
+    const data = positionData[i];
+    const time = JulianDate.addSeconds(start, data.time, new JulianDate());
+    const position = Cartesian3.fromDegrees(data.longitude, data.latitude, data.height);
+    positionSampler.addSample(time, position);
+  }
+
+  const entity = viewer.entities.getById("54");
+  if (!entity) {
+    console.error("Entity with ID 54 not found");
+    return;
+  }
+  entity.position = positionSampler;
+  entity.orientation = new VelocityOrientationProperty(positionSampler);
+
+  const stop = JulianDate.addSeconds(start, totalDuration, new JulianDate());
+  viewer.clock.startTime = start.clone();
+  viewer.clock.stopTime = stop.clone();
+  viewer.clock.currentTime = start.clone();
+  viewer.clock.shouldAnimate = true;
+  viewer.clock.clockRange = ClockRange.CLAMPED; // Ensure the clock stops when reaching the end time
+  viewer.clock.multiplier = 1;
+  // 时间轴
+  viewer.timeline.zoomTo(start, stop);
+  // viewer.trackedEntity = entity;
+
+  viewer.clock.onTick.addEventListener((tick) => {
+    if (!wallEntityModel || !entity.position) {
+      console.warn("Wall entity or entity position is not available");
+      return;
+    }
+
+
+    const entityPosition = viewer.entities.getById('54').position.getValue(tick.currentTime)
+    if (!entityPosition) {
+      console.warn("Entity position is not available at the current time");
+      return;
+    }
+
+    const wallPosition = wallEntityModel.position._value;
+    if (!wallPosition) {
+      console.warn("Wall entity position is not available at the current time");
+      return;
+    }
+
+    // 检查位置变化
+    console.log("currentTime:", tick.currentTime);
+
+    const distance = Cartesian3.distance(entityPosition, wallPosition);
+    console.log("Distance between entity and wall:", distance);
+
+    if (distance < 20) {
+      wallEntityModel.box.material = new ColorMaterialProperty(
+        new CallbackProperty(() => {
+          const alpha = 0.5 + 0.5 * Math.sin(viewer.clock.currentTime.secondsOfDay * 2);
+          return Color.RED.withAlpha(alpha);
+        }, false)
+      );
+    } else {
+      wallEntityModel.box.material = new ColorMaterialProperty(Color.RED.withAlpha(0.5));
+    }
+  });
+
+};
+
+const addWallEffect = (viewer: Viewer) => {
+  // 创建围墙并保存实体引用
+  wallEntityModel = viewer.entities.add({
+    name: "围墙",
+    // position: Cartesian3.fromDegrees(121.390179, 31.074584, 19),
+    position: Cartesian3.fromDegrees(111.731383, 40.834756, 1050),
+    box: {
+      dimensions: new Cartesian3(10, 10, 5),
+      material: new ColorMaterialProperty(Color.RED.withAlpha(0.5)),
+    }
+  });
+};
+
+const addModelEntity = (viewer: Viewer, models: any[]) => {
+  const position = Cartesian3.fromDegrees(
+    121.39048943,
+    31.0741399,
+    18.0
+  );
+  models && models.forEach((point) => {
+    const entity = viewer.entities.add({
+      id: point.id,
+      name: point.id,
+      position: position,
+      model: {
+        uri: 'gltf/diaoche.glb',
+        minimumPixelSize: 128, // 最小像素尺寸
+        maximumScale: 20, // 最大比例
+        scale: 0.01 // 比例
+      },
+      path: {
+        resolution: 1,
+        material: new PolylineGlowMaterialProperty({
+          glowPower: 0.1,
+          color: Color.YELLOW
+        }),
+        // leadTime、trailTime 不设置 path全显示
+        // leadTime:0,// 设置为0时 模型通过后显示path
+        trailTime: 0,// 设置为0时 模型通过后隐藏path
+        width: 10
+      }
+    })
+  });
+  viewer.scene.globe.enableLighting = true; // 开启光照
+  const bloom = viewer.scene.postProcessStages.bloom;
+  bloom.enabled = true;
+  bloom.uniforms.glowOnly = false;
+  bloom.uniforms.contrast = 128;
+  bloom.uniforms.brightness = -0.45;
+};
+
+// 启动 WebSocket 模拟
+const simulateWebSocketData = () => {
+  // 初始化模型的 WebSocket 模拟
+  socket = {
+    onmessage: (event: { data: string }) => {
+      const data = JSON.parse(event.data);
+      const { x, y, z, id } = data;
+
+      // 查找对应的模型并更新位置
+      if (id === 54) {  // 模型ID为54的吊机
+        // 更新模型位置
+        const offset = Cartesian3.fromDegrees(x, y, z);
+        const tileset = models.find(model => model.id === id);
+        if (tileset) {
+          const origin = tileset.boundingSphere.center;
+          const translation = Cartesian3.subtract(offset, origin, new Cartesian3());
+          const translationMatrix = Matrix4.fromTranslation(translation);
+          tileset.modelMatrix = Matrix4.multiply(translationMatrix, tileset.modelMatrix, new Matrix4());
+
+          // 每次更新模型位置后，检查与围墙的距离
+          updateWallFlashingEffect(tileset, wallEntity, distance);
+        }
+      }
+    }
+  };
+
+  // 启动模拟 WebSocket 数据接收
+  simulateWebSocket();
+};
+
+const simulateWebSocket = () => {
+  const interval = setInterval(() => {
+    if (mockDataIndex >= trajectory.length) {
+      clearInterval(interval)
+      return
+    }
+
+    const data = trajectory[mockDataIndex]
+    socket.onmessage({ data: JSON.stringify(data) })
+
+    mockDataIndex++
+  }, 1000) // 每秒发送一个位置数据
+}
+
+const addMouseEvents = (viewer: Viewer) => {
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+
+  // 鼠标移动事件
+  handler.setInputAction((movement) => {
+    const cartesian = viewer.scene.camera.pickEllipsoid(movement.endPosition, Cesium.Ellipsoid.WGS84);
+
+    if (cartesian) {
+      const cartographic = Cesium.Ellipsoid.WGS84.cartesianToCartographic(cartesian);
+      const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(8);
+      const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(8);
+
+      // console.log(`当前鼠标位置: 经度: ${longitude}, 纬度: ${latitude}`);
+    }
+  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+  // 鼠标中键点击事件
+  handler.setInputAction((click) => {
+    const cartesian = viewer.scene.camera.pickEllipsoid(click.position, Cesium.Ellipsoid.WGS84);
+
+    if (cartesian) {
+      const cartographic = Cesium.Ellipsoid.WGS84.cartesianToCartographic(cartesian);
+      const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(8);
+      const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(8);
+
+      console.log(`鼠标中键点击位置: 经度: ${longitude}, 纬度: ${latitude}`);
+    }
+  }, Cesium.ScreenSpaceEventType.MIDDLE_CLICK);
+};
+
+const addWallEntityLon = (viewer: Viewer, wallCorners: any, height: number, rotationAngle: number) => {
+  // 计算作业区域的中心点（经纬度和高度的平均值）
+  let centerLon = 0;
+  let centerLat = 0;
+  let centerHeight = 0;
+
+  wallCorners.forEach((corner: any) => {
+    centerLon += corner.lon;
+    centerLat += corner.lat;
+    centerHeight += corner.height;
+  });
+
+  const totalCorners = wallCorners.length;
+  centerLon /= totalCorners;
+  centerLat /= totalCorners;
+  centerHeight /= totalCorners;
+
+  // 计算作业区域的长、宽和高度
+  const length = Math.abs(wallCorners[0].lon - wallCorners[1].lon) * 111320 * 2.8; // 经纬度转换为米
+  const width = Math.abs(wallCorners[0].lat - wallCorners[3].lat) * 111320 * 3.5; // 经纬度转换为米
+
+  // 计算旋转角度
+  const heading = Cesium.Math.toRadians(-18); // 将角度转换为弧度
+  const pitch = 0; // 不需要俯仰旋转
+  const roll = 0; // 不需要翻转旋转
+
+  // 计算围墙的旋转方向
+  const orientation = Cesium.Transforms.headingPitchRollQuaternion(
+    Cesium.Cartesian3.fromDegrees(centerLon, centerLat, centerHeight), // 中心点位置
+    new Cesium.HeadingPitchRoll(heading, pitch, roll) // 指定旋转角度
+  );
+
+  // 创建立方体围墙体
+  wallEntityModel = viewer.entities.add({
+    name: "围墙",
+    position: Cartesian3.fromDegrees(centerLon, centerLat, centerHeight), // 中心点
+    orientation: orientation, // 添加旋转方向
+    box: {
+      dimensions: new Cartesian3(width, length, height), // 长、宽、高
+      material: new ColorMaterialProperty(Color.RED.withAlpha(0.5)), // 红色半透明材质
+    },
+  });
+};
+// 启动 WebSocket 监听器
+const startWebSocketListenerForModel = (tileset: Cesium3DTileset, modelId: number) => {
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    const { x, y, z, id } = data
+
+    if (id === modelId) {
+      // 更新模型位置
+      const offset = Cartesian3.fromDegrees(x, y, z)
+      const origin = tileset.boundingSphere.center
+      const translation = Cartesian3.subtract(offset, origin, new Cartesian3())
+
+      const translationMatrix = Matrix4.fromTranslation(translation)
+      tileset.modelMatrix = Matrix4.multiply(translationMatrix, tileset.modelMatrix, new Matrix4())
+      // 每次更新模型位置后，检查与围墙的距离
+      updateWallFlashingEffect(tileset, wallEntity, distance);
+    }
+  }
+};
 
 onUnmounted(() => {
   if (socket) {
