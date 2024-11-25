@@ -4,7 +4,7 @@
  * @Author: CaoChaoqiang
  * @Date: 2024-11-12 16:41:29
  * @LastEditors: CaoChaoqiang
- * @LastEditTime: 2024-11-15 16:48:52
+ * @LastEditTime: 2024-11-25 09:14:06
  */
 import { Cesium3DTileset, Matrix3, Matrix4, Transforms, Math, Cartesian3, Entity, ImageMaterialProperty, Color, ColorMaterialProperty, JulianDate, Viewer } from 'cesium'
 import useCesium from '/@/hooks/useCesium'
@@ -25,7 +25,7 @@ export default function useSetOSMBuildings(viewer: ElRef) {
   })
 }
 
-let tilesetUrl = `${import.meta.env.BASE_URL}model/pointcloud3dtiles/tileset.json`;
+let tilesetUrl = `${import.meta.env.BASE_URL}model/hhht/tileset.json`;
 export function addPointCloud3Dtiles(viewer: ElRef) {
   const Cesium = useCesium()
   // 创建并加载 3D Tiles
@@ -41,11 +41,11 @@ export function addPointCloud3Dtiles(viewer: ElRef) {
   viewer.scene.primitives.add(tileset);
 
   // 可选：设置视图以适应点云
-  tileset.readyPromise.then(() => {
-    viewer.scene.camera.flyToBoundingSphere(tileset.boundingSphere);
-  }).catch((error) => {
-    console.error('Failed to load 3D Tiles:', error);
-  });
+//   tileset.readyPromise.then(() => {
+//     viewer.scene.camera.flyToBoundingSphere(tileset.boundingSphere);
+//   }).catch((error) => {
+//     console.error('Failed to load 3D Tiles:', error);
+//   });
 }
 
 // 添加多个模型

@@ -7,7 +7,7 @@
 import { ref, onUnmounted, onMounted, provide } from 'vue'
 import { useRouter } from 'vue-router'
 import { addPointCloud3Dtiles, addMovingModels, wallEntity, updateWallFlashingEffect } from '/@/hooks/demo/setOSMBuildings'
-import { CallbackProperty, Cartesian3, Cesium3DTileset, ClockRange, Color, ColorMaterialProperty, HermitePolynomialApproximation, JulianDate, Matrix4, PolylineGlowMaterialProperty, SampledPositionProperty, VelocityOrientationProperty, Viewer } from 'cesium'
+import { CallbackProperty, Cartesian3, Cesium3DTileset, ClockRange, Color, ColorMaterialProperty, HermitePolynomialApproximation, JulianDate, Matrix4, PolygonHierarchy, PolylineGlowMaterialProperty, SampledPositionProperty, VelocityOrientationProperty, Viewer } from 'cesium'
 import * as Cesium from 'cesium';
 
 const router = useRouter()
@@ -28,25 +28,76 @@ const distance = 20 // 模型之间的距离
 let x = 1;  // 透明度初始值
 let flog = true;  // 控制透明度增减
 let flashing = false;  // 控制是否闪烁
+// const trajectory = [
+//   { "x": 121.39048943, "y": 31.0741399, "z": 18, "id": 54, time: 0 },
+//   { "x": 121.39045845, "y": 31.07421795, "z": 18, "id": 54, time: 1 },
+//   { "x": 121.3904275, "y": 31.07429599, "z": 18, "id": 54, time: 2 },
+//   { "x": 121.39039655, "y": 31.07437403, "z": 18, "id": 54, time: 3 },
+//   { "x": 121.3903656, "y": 31.07445208, "z": 18, "id": 54, time: 4 },
+//   { "x": 121.39033464, "y": 31.07453013, "z": 18, "id": 54, time: 5 },
+//   { "x": 121.39030369, "y": 31.07460817, "z": 18, "id": 54, time: 6 },
+//   { "x": 121.39027274, "y": 31.07468622, "z": 18, "id": 54, time: 7 },
+//   { "x": 121.39024179, "y": 31.07476427, "z": 18, "id": 54, time: 8 },
+//   { "x": 121.39021084, "y": 31.07484231, "z": 18, "id": 54, time: 9 },
+//   { "x": 121.39017989, "y": 31.07492036, "z": 18, "id": 54, time: 10 },
+//   { "x": 121.39014894, "y": 31.07499841, "z": 18, "id": 54, time: 11 },
+//   { "x": 121.39011799, "y": 31.07507646, "z": 18, "id": 54, time: 12 },
+//   { "x": 121.39008704, "y": 31.0751545, "z": 18, "id": 54, time: 13 },
+//   { "x": 121.39005609, "y": 31.07523255, "z": 18, "id": 54, time: 14 },
+//   { "x": 121.39002513, "y": 31.0753106, "z": 18, "id": 54, time: 15 },
+//   { "x": 121.39002513, "y": 31.07538865, "z": 18, "id": 54, time: 16 },
+// ]
 const trajectory = [
-  { "x": 121.39048943, "y": 31.0741399, "z": 18, "id": 54, time: 0 },
-  { "x": 121.39045845, "y": 31.07421795, "z": 18, "id": 54, time: 1 },
-  { "x": 121.3904275, "y": 31.07429599, "z": 18, "id": 54, time: 2 },
-  { "x": 121.39039655, "y": 31.07437403, "z": 18, "id": 54, time: 3 },
-  { "x": 121.3903656, "y": 31.07445208, "z": 18, "id": 54, time: 4 },
-  { "x": 121.39033464, "y": 31.07453013, "z": 18, "id": 54, time: 5 },
-  { "x": 121.39030369, "y": 31.07460817, "z": 18, "id": 54, time: 6 },
-  { "x": 121.39027274, "y": 31.07468622, "z": 18, "id": 54, time: 7 },
-  { "x": 121.39024179, "y": 31.07476427, "z": 18, "id": 54, time: 8 },
-  { "x": 121.39021084, "y": 31.07484231, "z": 18, "id": 54, time: 9 },
-  { "x": 121.39017989, "y": 31.07492036, "z": 18, "id": 54, time: 10 },
-  { "x": 121.39014894, "y": 31.07499841, "z": 18, "id": 54, time: 11 },
-  { "x": 121.39011799, "y": 31.07507646, "z": 18, "id": 54, time: 12 },
-  { "x": 121.39008704, "y": 31.0751545, "z": 18, "id": 54, time: 13 },
-  { "x": 121.39005609, "y": 31.07523255, "z": 18, "id": 54, time: 14 },
-  { "x": 121.39002513, "y": 31.0753106, "z": 18, "id": 54, time: 15 },
-  { "x": 121.39002513, "y": 31.07538865, "z": 18, "id": 54, time: 16 },
-]
+  { "x": 111.730625, "y": 40.834234, "z": 1050, "id": 54, "time": 0 },
+  { "x": 111.730846, "y": 40.834296, "z": 1050, "id": 54, "time": 1 },
+  { "x": 111.731067, "y": 40.834358, "z": 1050, "id": 54, "time": 2 },
+  { "x": 111.731288, "y": 40.83442, "z": 1050, "id": 54, "time": 3 },
+  { "x": 111.731509, "y": 40.834482, "z": 1050, "id": 54, "time": 4 },
+  { "x": 111.73173, "y": 40.834544, "z": 1050, "id": 54, "time": 5 },
+  { "x": 111.731951, "y": 40.834606, "z": 1050, "id": 54, "time": 6 },
+  { "x": 111.732172, "y": 40.834668, "z": 1050, "id": 54, "time": 7 },
+  { "x": 111.732393, "y": 40.83473, "z": 1050, "id": 54, "time": 8 },
+  { "x": 111.732614, "y": 40.834792, "z": 1050, "id": 54, "time": 9 },
+  { "x": 111.732835, "y": 40.834854, "z": 1050, "id": 54, "time": 10 },
+  { "x": 111.733056, "y": 40.834916, "z": 1050, "id": 54, "time": 11 },
+  { "x": 111.733277, "y": 40.834978, "z": 1050, "id": 54, "time": 12 },
+  { "x": 111.733498, "y": 40.83504, "z": 1050, "id": 54, "time": 13 },
+  { "x": 111.733719, "y": 40.835102, "z": 1050, "id": 54, "time": 14 },
+  { "x": 111.73394, "y": 40.835164, "z": 1050, "id": 54, "time": 15 },
+  { "x": 111.733709, "y": 40.835046, "z": 1050, "id": 54, "time": 16 }
+];
+
+// 作业区顶点坐标作为全局变量
+// 秀东Ⅰ线可用
+const wallCornersLinexiudong1 = [
+  { lon: 111.7340287, lat: 40.8351447, height: 1047.254 }, // 东北角
+  { lon: 111.7341724, lat: 40.8347313, height: 1047.199 }, // 东南角
+  { lon: 111.7339959, lat: 40.8346915, height: 1047.195 }, // 西南角
+  { lon: 111.733838, lat: 40.8351044, height: 1047.213 },  // 西北角
+];
+
+const wallCornersxiudong2 = [
+  { lon: 111.733838, lat: 40.8351044, height: 1045.213 }, // 东北
+  { lon: 111.7339959, lat: 40.8346915, height: 1045.195 }, // 东南
+  { lon: 111.7338284, lat: 40.8346555, height: 1045.178 }, // 西南
+  { lon: 111.7336655, lat: 40.8350642, height: 1045.218 }, // 西北
+];
+
+
+const mainSwitchCorners = [
+  { lon: 111.7336655, lat: 40.8350642, height: 1050.218 }, // 东北角
+  { lon: 111.7336566, lat: 40.8346178, height: 1050.179 }, // 东南角
+  { lon: 111.7335015, lat: 40.8350275, height: 1050.196 }, // 西南角
+  { lon: 111.7333182, lat: 40.8349875, height: 1050.199 }, // 西北角
+];
+
+// 东科线可用
+const dongkeLineCorners = [
+  { lon: 111.7335015, lat: 40.8350275, height: 1050.196 }, // 东北角
+  { lon: 111.7336566, lat: 40.8346178, height: 1050.179 }, // 东南角
+  { lon: 111.7334869, lat: 40.8345796, height: 1050.172 }, // 西南角
+  { lon: 111.7333182, lat: 40.8349875, height: 1050.199 }, // 西北角
+];
 
 let mockDataIndex = 0
 
@@ -88,30 +139,72 @@ const handleSelect = (value: string) => {
   router.push({ name: value })
 }
 
+const connectWebSocket = () => {
+  socket = new WebSocket('ws://124.223.76.185:9021/beidou');
+
+  socket.onopen = () => {
+    console.log('WebSocket connection opened');
+    // 示例：发送 deviceId
+const deviceId = '08C4B14015122046';
+sendMessage(deviceId);
+
+  };
+
+  socket.onmessage = (event) => {
+    console.log('Message received:', event.data);
+    messageLog.value.push(event.data);
+  };
+
+  socket.onerror = (error) => {
+    console.error('WebSocket error:', error);
+  };
+
+  socket.onclose = () => {
+    console.log('WebSocket connection closed');
+  };
+};
+
+// 发送消息的函数
+const sendMessage = (message) => {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(message); // 直接发送字符串
+    console.log('Message sent:', message);
+  } else {
+    console.error('WebSocket is not open. Cannot send message.');
+  }
+};
+
 const mapOnReady = () => {
   addPointCloud3Dtiles(window.CViewer)
-  //     let boundingSphere = {
-  //     "center": {
-  //         "x": -2847916.131570683,
-  //         "y": 4667530.239287404,
-  //         "z": 3272989.1747708023
-  //     },
-  //     "radius": 155.44303661927108
-  // }
-  // window.CViewer.scene.camera.flyToBoundingSphere(boundingSphere);
+  
+  connectWebSocket();
+  
+  // window.CViewer.camera.flyTo({
+  //   destination: Cesium.Cartesian3.fromDegrees(111.732393, 40.83473, 1500),
+  //   orientation: {
+  //     heading: Cesium.Math.toRadians(0.0),
+  //     pitch: Cesium.Math.toRadians(-90.0),
+  //     roll: 0.0
+  //   }
+  // })
 
-  const boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(121.39048943, 31.0741399, 0), 500);
+  const boundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(111.732263, 40.829597, 1500), 20);
 
   window.CViewer.scene.camera.flyToBoundingSphere(boundingSphere, {
     duration: 2 // 飞行持续时间
   });
 
   setTimeout(() => {
-    addWallEffect(window.CViewer);
-    const point = { lng: 121.397179, lat: 31.074184 };
+    // addWallEffect(window.CViewer);
+    // 秀东一线
+    // addWallEntityLon(window.CViewer, dongkeLineCorners, 10);
+    addWallEntity(window.CViewer, dongkeLineCorners, 1046, 1050, 0);
+    // 添加鼠标事件监听
+    // addMouseEvents(window.CViewer);
+    const point = { lng: 111.753957, lat: 40.820835 };
     const isInside = isPointInsideWall(window.CViewer, wallEntityModel, point);
     console.log("点是否在围墙内部:", isInside);
-    simulateModelMoving(window.CViewer, trajectory, 30);
+    simulateModelMoving(window.CViewer, trajectory, 60);
   }, 4000); // 等待 flyToBoundingSphere 完成
   // models.forEach((model) => {
   //   const tileset = new Cesium3DTileset({
@@ -138,6 +231,159 @@ const mapOnReady = () => {
   // console.log("点是否在围墙内部:", isInside);
   //     simulateModelMoving(window.CViewer, trajectory, 30);
 }
+
+const addMouseEvents = (viewer: Viewer) => {
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+
+  // 鼠标移动事件
+  handler.setInputAction((movement) => {
+    const cartesian = viewer.scene.camera.pickEllipsoid(movement.endPosition, Cesium.Ellipsoid.WGS84);
+
+    if (cartesian) {
+      const cartographic = Cesium.Ellipsoid.WGS84.cartesianToCartographic(cartesian);
+      const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(8);
+      const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(8);
+
+      // console.log(`当前鼠标位置: 经度: ${longitude}, 纬度: ${latitude}`);
+    }
+  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+  // 鼠标中键点击事件
+  handler.setInputAction((click) => {
+    const cartesian = viewer.scene.camera.pickEllipsoid(click.position, Cesium.Ellipsoid.WGS84);
+
+    if (cartesian) {
+      const cartographic = Cesium.Ellipsoid.WGS84.cartesianToCartographic(cartesian);
+      const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(8);
+      const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(8);
+
+      console.log(`鼠标中键点击位置: 经度: ${longitude}, 纬度: ${latitude}`);
+    }
+  }, Cesium.ScreenSpaceEventType.MIDDLE_CLICK);
+};
+
+const addWallEntityLon = (viewer: Viewer, wallCorners: any, height: number, rotationAngle: number) => {
+  // 计算作业区域的中心点（经纬度和高度的平均值）
+  let centerLon = 0;
+  let centerLat = 0;
+  let centerHeight = 0;
+
+  wallCorners.forEach((corner: any) => {
+    centerLon += corner.lon;
+    centerLat += corner.lat;
+    centerHeight += corner.height;
+  });
+
+  const totalCorners = wallCorners.length;
+  centerLon /= totalCorners;
+  centerLat /= totalCorners;
+  centerHeight /= totalCorners;
+
+  // 计算作业区域的长、宽和高度
+  const length = Math.abs(wallCorners[0].lon - wallCorners[1].lon) * 111320 * 2.8; // 经纬度转换为米
+  const width = Math.abs(wallCorners[0].lat - wallCorners[3].lat) * 111320 * 3.5; // 经纬度转换为米
+
+  // 计算旋转角度
+  const heading = Cesium.Math.toRadians(-18); // 将角度转换为弧度
+  const pitch = 0; // 不需要俯仰旋转
+  const roll = 0; // 不需要翻转旋转
+
+  // 计算围墙的旋转方向
+  const orientation = Cesium.Transforms.headingPitchRollQuaternion(
+    Cesium.Cartesian3.fromDegrees(centerLon, centerLat, centerHeight), // 中心点位置
+    new Cesium.HeadingPitchRoll(heading, pitch, roll) // 指定旋转角度
+  );
+
+  // 创建立方体围墙体
+  wallEntityModel = viewer.entities.add({
+    name: "围墙",
+    position: Cartesian3.fromDegrees(centerLon, centerLat, centerHeight), // 中心点
+    orientation: orientation, // 添加旋转方向
+    box: {
+      dimensions: new Cartesian3(width, length, height), // 长、宽、高
+      material: new ColorMaterialProperty(Color.RED.withAlpha(0.5)), // 红色半透明材质
+    },
+  });
+};
+
+
+const addWallEntity = (viewer: Viewer, wallCorners: any, bottomHeight: number, topHeight: number, rotationDegrees: number) => {
+  // 将角度转换为弧度
+  const rotationRadians = Cesium.Math.toRadians(rotationDegrees);
+
+  // 计算作业区域的中心点
+  let centerLon = 0, centerLat = 0;
+  wallCorners.forEach((corner: any) => {
+    centerLon += corner.lon;
+    centerLat += corner.lat;
+  });
+  centerLon /= wallCorners.length;
+  centerLat /= wallCorners.length;
+
+  // 旋转围墙顶点
+  const rotatedCorners = wallCorners.map((corner: any) => {
+    const dx = corner.lon - centerLon;
+    const dy = corner.lat - centerLat;
+
+    const rotatedLon = centerLon + (dx * Math.cos(rotationRadians) - dy * Math.sin(rotationRadians));
+    const rotatedLat = centerLat + (dx * Math.sin(rotationRadians) + dy * Math.cos(rotationRadians));
+
+    return {
+      lon: rotatedLon,
+      lat: rotatedLat,
+      height: corner.height,
+    };
+  });
+
+  // 转换为 Cartesian3（包括底部和顶部顶点）
+  const bottomPositions = rotatedCorners.map((corner: any) =>
+    Cesium.Cartesian3.fromDegrees(corner.lon, corner.lat, bottomHeight)
+  );
+  const topPositions = rotatedCorners.map((corner: any) =>
+    Cesium.Cartesian3.fromDegrees(corner.lon, corner.lat, topHeight)
+  );
+
+  // 创建多边形围墙体
+  wallEntityModel = viewer.entities.add({
+    polygon: {
+      hierarchy: new Cesium.PolygonHierarchy(bottomPositions),
+      material: Cesium.Color.RED.withAlpha(0.5), // 半透明红色
+      extrudedHeight: topHeight,                // 顶部高度
+      height: bottomHeight,                     // 底部高度
+      outline: true,
+      outlineColor: Cesium.Color.BLACK,         // 黑色轮廓
+    },
+  });
+
+  // 将视图定位到围墙区域
+  // viewer.camera.flyTo({
+  //   destination: Cesium.Rectangle.fromDegrees(
+  //     Math.min(...rotatedCorners.map((c) => c.lon)),
+  //     Math.min(...rotatedCorners.map((c) => c.lat)),
+  //     Math.max(...rotatedCorners.map((c) => c.lon)),
+  //     Math.max(...rotatedCorners.map((c) => c.lat))
+  //   ),
+  //   orientation: {
+  //     heading: Cesium.Math.toRadians(0), // 水平方向的角度
+  //     pitch: Cesium.Math.toRadians(-45), // 相机向下看
+  //     roll: 0, // 无翻转
+  //   },
+  //   duration: 2, // 飞行时间
+  // });
+};
+
+const addWallEffect = (viewer: Viewer) => {
+  // 创建围墙并保存实体引用
+  wallEntityModel = viewer.entities.add({
+    name: "围墙",
+    // position: Cartesian3.fromDegrees(121.390179, 31.074584, 19),
+    position: Cartesian3.fromDegrees(111.731383, 40.834756, 1050),
+    box: {
+      dimensions: new Cartesian3(10, 10, 5),
+      material: new ColorMaterialProperty(Color.RED.withAlpha(0.5)),
+    }
+  });
+};
 
 // 启动 WebSocket 模拟
 const simulateWebSocketData = () => {
@@ -207,17 +453,6 @@ const addModelEntity = (viewer: Viewer, models: any[]) => {
   bloom.uniforms.brightness = -0.45;
 };
 
-const addWallEffect = (viewer: Viewer) => {
-  // 创建围墙并保存实体引用
-  wallEntityModel = viewer.entities.add({
-    name: "围墙",
-    position: Cartesian3.fromDegrees(121.390179, 31.074584, 19),
-    box: {
-      dimensions: new Cartesian3(10, 10, 5),
-      material: new ColorMaterialProperty(Color.RED.withAlpha(0.5)),
-    }
-  });
-};
 
 const simulateModelMoving2 = (viewer: Viewer, trajectory: any[]) => {
   // Define the total duration as the length of the trajectory in seconds
@@ -361,8 +596,8 @@ const simulateModelMoving1 = (viewer: Viewer, trajectory: any[]) => {
 };
 
 const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => {
-  const totalDuration = trajectory.length -  1;
-  
+  const totalDuration = trajectory.length - 1;
+
   // 起始时间
   let start = Cesium.JulianDate.fromDate(new Date());
   // 结束时间
@@ -443,7 +678,9 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
     // console.log("currentTime:", tick.currentTime);
     // console.log('position: ', position);
 
-    const wallPosition = wallEntityModel.position._value;
+    // const wallPosition = wallEntityModel.position._value;
+    const wallPolygon = wallEntityModel.polygon;
+    const wallPosition = getPolygonCenter(wallPolygon);
     if (wallPosition) {
       // console.log("Wall center position:", wallPosition);
     } else {
@@ -459,11 +696,36 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
     }
   })
   viewer.clock.onStop.addEventListener(() => {
-    console.log("Animation stopped");
+    // console.log("Animation stopped");
     // 解除相机锁定
     viewer.trackedEntity = null;
   });
 
+};
+
+// 获取多边形的中心点
+const getPolygonCenter = (polygon) => {
+  if (!polygon.hierarchy) {
+    console.error("Polygon hierarchy is undefined.");
+    return null;
+  }
+
+  const positions = polygon.hierarchy.getValue(Cesium.JulianDate.now()).positions;
+  if (!positions || positions.length === 0) {
+    console.error("Polygon positions are undefined or empty.");
+    return null;
+  }
+
+  // 计算中心点
+  let x = 0, y = 0, z = 0;
+  positions.forEach((pos) => {
+    x += pos.x;
+    y += pos.y;
+    z += pos.z;
+  });
+
+  const length = positions.length;
+  return new Cesium.Cartesian3(x / length, y / length, z / length);
 };
 
 const blinkEntity = (entity, duration, frequency) => {
@@ -493,35 +755,29 @@ const createProperty = (source, start) => {
 
 //判断点是否在多边形内
 const isPointInsideWall = (viewer, wallEntity, point) => {
-  if (!wallEntity || !wallEntity.box || !wallEntity.position) {
+  if (!wallEntity || !wallEntity.polygon || !wallEntity.polygon.hierarchy) {
     console.error("Invalid wall entity");
     return false;
   }
 
-  // 获取围墙中心位置（Cartesian3）
-  const wallCenterCartesian = wallEntity.position.getValue(Cesium.JulianDate.now());
+  // 获取多边形顶点的 Cartesian3 列表
+  const hierarchy = wallEntity.polygon.hierarchy.getValue(Cesium.JulianDate.now());
+  if (!hierarchy || !hierarchy.positions) {
+    console.error("Polygon hierarchy is undefined or empty.");
+    return false;
+  }
+
+  // 将 Cartesian3 顶点转换为地理坐标（经纬度）
   const ellipsoid = viewer.scene.globe.ellipsoid;
+  const polygonCorners = hierarchy.positions.map((position) => {
+    const cartographic = ellipsoid.cartesianToCartographic(position);
+    return {
+      lat: Cesium.Math.toDegrees(cartographic.latitude),
+      lng: Cesium.Math.toDegrees(cartographic.longitude),
+    };
+  });
 
-  // 转换中心位置到地理坐标
-  const wallCenterCartographic = ellipsoid.cartesianToCartographic(wallCenterCartesian);
-  const wallLat = Cesium.Math.toDegrees(wallCenterCartographic.latitude);
-  const wallLng = Cesium.Math.toDegrees(wallCenterCartographic.longitude);
-  const wallHeight = wallCenterCartographic.height;
-
-  // 获取围墙尺寸
-  const dimensions = wallEntity.box.dimensions.getValue(Cesium.JulianDate.now());
-  const halfWidth = dimensions.x / 2;
-  const halfDepth = dimensions.y / 2;
-
-  // 计算围墙四个顶点的经纬度
-  const corners = [
-    { lat: wallLat + halfDepth / 111320, lng: wallLng - halfWidth / (111320 * Math.cos(Cesium.Math.toRadians(wallLat))) }, // 左上
-    { lat: wallLat + halfDepth / 111320, lng: wallLng + halfWidth / (111320 * Math.cos(Cesium.Math.toRadians(wallLat))) }, // 右上
-    { lat: wallLat - halfDepth / 111320, lng: wallLng + halfWidth / (111320 * Math.cos(Cesium.Math.toRadians(wallLat))) }, // 右下
-    { lat: wallLat - halfDepth / 111320, lng: wallLng - halfWidth / (111320 * Math.cos(Cesium.Math.toRadians(wallLat))) }  // 左下
-  ];
-
-  // 判断点是否在围墙多边形内
+  // 判断点是否在多边形内
   const isPointInPolygon = (point, polygon) => {
     let inside = false;
     const x = point.lng, y = point.lat;
@@ -535,8 +791,10 @@ const isPointInsideWall = (viewer, wallEntity, point) => {
     return inside;
   };
 
-  return isPointInPolygon(point, corners);
+  // 检查点是否在围墙多边形内
+  return isPointInPolygon(point, polygonCorners);
 };
+
 
 onUnmounted(() => {
   if (socket) {
