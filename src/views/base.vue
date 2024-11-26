@@ -318,6 +318,7 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
     }
   });
 
+  let previousDistance = Infinity; // 初始化上一次的距离为无穷大
   viewer.clock.onTick.addEventListener((tick) => {
     // let q = viewer.entities.getById('move').orientation.getValue(tick.currentTime)
     // 根据四元素获取方位角heading ,pitch, roll 设置仰角等
@@ -356,11 +357,13 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
     const distance = Cartesian3.distance(position, wallPosition);
     console.log("Distance between entity and wall:", distance);
 
-    if (distance < dis) {
+    if (distance < dis && distance > previousDistance) {
       blinkEntity(wallEntityModel, 1000, 250); // 闪烁1秒，频率为500毫秒
     } else {
       wallEntityModel.show = true; // 如果距离大于20米，恢复wallEntityModel的可见性
     }
+    // 更新上一帧的距离
+    previousDistance = distance;
   })
   viewer.clock.onStop.addEventListener(() => {
     // console.log("Animation stopped");
