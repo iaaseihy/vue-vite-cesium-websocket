@@ -301,9 +301,9 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
     orientation: new Cesium.VelocityOrientationProperty(property),
     // 模型
     model: {
-      uri: 'gltf/diaoche.glb',
+      uri: 'gltf/kg.glb',
       minimumPixelSize: 64, // 您可以尝试减少这个值
-      scale: 1.0, // 根据您的需要调整比例尺
+      scale: 10.0, // 根据您的需要调整比例尺
     },
     path: {
       resolution: 1,
