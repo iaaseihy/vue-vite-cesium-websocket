@@ -464,6 +464,7 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
   // 结束时间
   let stop = Cesium.JulianDate.addSeconds(start, totalDuration, new Cesium.JulianDate());
   // 设置时钟
+  viewer.timeline.container.style.display = 'none';
   viewer.clock.startTime = start;
   viewer.clock.currentTime = start.clone();
   viewer.clock.stopTime = stop.clone();
