@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
 import Base from '/@/views/base.vue'
 import osm from '/@/views/osm-building.vue'
 import tile from '/@/views/3d-tile.vue'
+import convert from '/@/views/dataConvert.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -19,6 +20,11 @@ const routes: Array<RouteRecordRaw> = [
     name: 'tile',
     component: tile,
   },
+  {
+    path: '/data-convert',
+    name: '404',
+    component: convert,
+  }
 ]
 
 const router = createRouter({
