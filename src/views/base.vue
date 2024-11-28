@@ -7,7 +7,7 @@
 import { ref, onUnmounted, onMounted, provide } from 'vue'
 import { useRouter } from 'vue-router'
 import { addPointCloud3Dtiles, addMovingModels, wallEntity, updateWallFlashingEffect } from '/@/hooks/demo/setOSMBuildings'
-import { CallbackProperty, Cartesian3, Cesium3DTileset, ClockRange, Color, ColorMaterialProperty, HermitePolynomialApproximation, JulianDate, Matrix4, PolygonHierarchy, PolylineGlowMaterialProperty, SampledPositionProperty, VelocityOrientationProperty, Viewer } from 'cesium'
+import { CallbackProperty, Cartesian3, Cesium3DTileset, ClockRange, Color, ColorMaterialProperty, HermitePolynomialApproximation, JulianDate, Matrix4, PolygonHierarchy, PolylineGlowMaterialProperty, SampledPositionProperty, Transforms, VelocityOrientationProperty, Viewer } from 'cesium'
 import trajectory from '/@/assets/hhht.json';
 import * as Cesium from 'cesium';
 
@@ -500,6 +500,7 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
   let wasInsideWall = false;
   let wasInsideWall2 = false;
   let wasInsideWall3 = false;
+  let lastPosition = null;
   // 设置视角跟随物体运动，并显示信息框
   // viewer.trackedEntity = planeModel;
   viewer.clock.onTick.addEventListener((tick) => {
@@ -556,43 +557,58 @@ const simulateModelMoving = (viewer: Viewer, trajectory: any[], dis: number) => 
     // 更新状态
     wasInsideWall3 = isInsideWall3;
 
-    // 强制设置模型的俯仰角为 0 度，保持模型直立
-    // const velocityOrientation = planeModel.orientation.getValue(tick.currentTime); // 获取当前的VelocityOrientation
-    // if (velocityOrientation) {
-    //   const headingPitchRoll = new Cesium.HeadingPitchRoll(
-    //     velocityOrientation.heading, // 使用模型的朝向（heading）
-    //     Cesium.Math.toRadians(0),   // 设置俯仰角为 0 度
-    //     velocityOrientation.roll     // 使用模型的滚转角（roll）
-    //   );
-    //   const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, headingPitchRoll);
-    //   planeModel.orientation = orientation; // 更新模型的朝向，保持直立
-    // }
-    
-//     // 获取当前的 VelocityOrientation
-//   const velocityOrientation = planeModel.orientation.getValue(tick.currentTime);
+    // 从 Quaternion 获取 HeadingPitchRoll
+    const velocityOrientation = planeModel.orientation.getValue(tick.currentTime);
+    if (velocityOrientation) {
+      const headingPitchRoll = Cesium.HeadingPitchRoll.fromQuaternion(velocityOrientation);
 
-// if (velocityOrientation) {
-//   // Step 1: 从 Quaternion 获取 HeadingPitchRoll
-//   const headingPitchRoll = Cesium.HeadingPitchRoll.fromQuaternion(velocityOrientation);
-  
-//   // Step 2: 设置 pitch 为 0 度 (即直立)
-//   headingPitchRoll.pitch = Cesium.Math.toRadians(0);  // 使模型保持垂直
+      // 锁定 pitch 为 0 度，确保模型直立
+      headingPitchRoll.pitch = Cesium.Math.toRadians(0);  // 保持模型垂直
 
-//   // Step 3: 将修改后的 HeadingPitchRoll 转换为 Quaternion
-//   const orientation = Cesium.Transforms.headingPitchRollQuaternion(
-//     position,  // 使用模型位置的原点（保持位置不变）
-//     headingPitchRoll
-//   );
+      // 锁定 roll 为 0，避免滚转
+      headingPitchRoll.roll = 0;  // 保持模型不滚动
 
-//   // 更新模型的 orientation
-//   planeModel.orientation = orientation;
-// }
+      // 获取当前位置和前一个位置的速度方向
+      if (lastPosition) {
+        const direction = Cesium.Cartesian3.subtract(position, lastPosition, new Cesium.Cartesian3());
+
+        // 如果方向向量不是零向量，才进行归一化和计算 heading
+        if (Cesium.Cartesian3.magnitude(direction) !== 0) {
+          headingPitchRoll.heading = getHeading(lastPosition, position) + Math.PI * 0.75;  // 这里加上 45 度调整;
+        }
+      }
+
+      // 更新 lastPosition 为当前的位置
+      lastPosition = position;
+
+      // 使用 HeadingPitchRoll 转换为 Quaternion
+      const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, headingPitchRoll);
+
+      // 更新模型的朝向
+      planeModel.orientation = orientation;
+    }
   });
 
   viewer.clock.onStop.addEventListener(() => {
     viewer.trackedEntity = null;
   });
 };
+
+// 根据两个坐标点，获取 Heading（朝向）
+const getHeading = (pointA: Cesium.Cartesian3, pointB: Cesium.Cartesian3) => {
+    // 创建从点 A 到点 B 的向量
+    const direction = Cesium.Cartesian3.subtract(pointB, pointA, new Cesium.Cartesian3());
+
+    // 归一化方向向量
+    const normalizedDirection = Cesium.Cartesian3.normalize(direction, new Cesium.Cartesian3());
+
+    // 计算朝向，使用 atan2 来计算角度
+    const heading = Math.atan2(normalizedDirection.y, normalizedDirection.x);
+
+    // 返回计算的朝向角度
+    return heading;
+};
+
 
 // 获取多边形的中心点
 const getPolygonCenter = (polygon) => {
